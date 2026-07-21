@@ -1,5 +1,4 @@
 ; Ordenacion de listas - Selection Sort
-; Cargar con: (LOAD "mdv1_sort")
 
 (DEFUN MENOR (L)
   (COND ((ATOM (CDR L)) (CAR L))

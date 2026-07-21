@@ -1,5 +1,5 @@
 ; Aritmetica simbolica - Derivadas
-; Cargar con: (LOAD "mdv1_deriv")
+
 
 (DEFUN SUMP (E)
   (COND ((ATOM E) NIL)

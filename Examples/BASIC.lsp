@@ -1,5 +1,4 @@
-'(PRUEBA2)
-
+; --- BASIC EXAMPLES FOR LISP ---
 
 ; --- Tipos ---
 (NUMBERP 5)
@@ -36,14 +35,3 @@
 (DEFUN FIB (N) (COND ((= N 0) 0) ((= N 1) 1) 
 (T (+ (FIB (- N 1)) (FIB (- N 2))))))
 (FIB 10)
-
-; --- Funciones de orden superior ---
-(DEFUN MAP (F L) (COND ((ATOM L) NIL) (T (CONS (F (CAR L)) (MAP F (CDR L))))))
-(DEFUN DOBLE (X) (+ X X))
-(MAP DOBLE '(1 2 3))
-
-; --- Errores controlados (el REPL debe seguir vivo despues) ---
-(FOO)
-(CAR NIL)
-(/ 5 0)
-(+ 1 'X)
