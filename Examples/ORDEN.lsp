@@ -1,4 +1,4 @@
-; Funciones de orden superior
+; --- Funciones de orden superior ---
 
 (DEFUN MAP (F L)
   (COND ((ATOM L) NIL)
@@ -20,12 +20,12 @@
 (DEFUN SUMA (A B) (+ A B))
 (DEFUN PRODUCTO (A B) (* A B))
 
-(MAP    DOBLE '(1 2 3 4 5))
+(MAP 'DOBLE '(1 2 3 4 5))
 
-(FILTER POSITIVO '(-2 -1 0 1 2 3))
+(FILTER 'POSITIVO '(-2 -1 0 1 2 3))
 
-(FILTER GRANDE '(1 2 3 4 5 6))
+(FILTER 'GRANDE '(1 2 3 4 5 6))
 
-(REDUCE SUMA 0 '(1 2 3 4 5))
+(REDUCE 'SUMA 0 '(1 2 3 4 5))
 
-(REDUCE PRODUCTO 1 '(1 2 3 4 5))
+(REDUCE 'PRODUCTO 1 '(1 2 3 4 5))
