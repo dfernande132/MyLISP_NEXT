@@ -4,6 +4,7 @@ MyLISP is a LISP-1 interpreter for the ZX Spectrum Next, written in C (Z88DK)
 under NextZXOS. It is designed as a computer algebra system (CAS) engine:
 it prioritizes mathematical exactness over convenience, strict lexical
 scoping, and arithmetic safety over concrete types.
+
 ![MyLISP Next Screenshot](Screenshot/screen.png)
 
 It shares its design and philosophy with the original [Sinclair QL version](https://github.com/dfernande132/MyLISP),
