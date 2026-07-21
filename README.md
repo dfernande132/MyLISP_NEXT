@@ -13,7 +13,7 @@ recursive** — a user Lisp program's recursion depth does not depend on the
 Z80's call stack. Deeply recursive functions (hundreds of levels) run
 without exhausting the stack; the practical limit becomes the heap instead.
 
-![MyLISP Next Screenshot](Screenshot/repl.png)
+![MyLISP Next Screenshot](Screenshot/repl2.png)
 
 
 ## 💻 System Requirements & Quick Start
