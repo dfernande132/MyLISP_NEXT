@@ -24,7 +24,7 @@ without exhausting the stack; the practical limit becomes the heap instead.
   32,000 heap cells, paged in physical 8KB banks outside the main
   `$8000–$FFFF` window.
 - Copy `mylisp.next` to your SD card / NextZXOS filesystem and run it from
-  the NextZXOS browser (or your usual dot-command / `.next` launch method).
+  the NextZXOS browser.
 
 ## 📂 Repository Structure
 
