@@ -40,7 +40,7 @@
 ; --- Funciones de orden superior ---
 (DEFUN MAP (F L) (COND ((ATOM L) NIL) (T (CONS (F (CAR L)) (MAP F (CDR L))))))
 (DEFUN DOBLE (X) (+ X X))
-(MAP 'DOBLE '(1 2 3))
+(MAP DOBLE '(1 2 3))
 
 ; --- Errores controlados (el REPL debe seguir vivo despues) ---
 (FOO)
