@@ -1,0 +1,25 @@
+# Build intermediates; keep the ready-to-run interpreter.
+/build/*
+!/build/MyLISP.nex
+/dist/
+
+# Internal development history and tests (kept locally).
+/docs/
+/tests/
+/*.md
+!/README.md
+/CAMBIOS.patch
+/LEEME_ETAPA4b.txt
+/VALIDACION.json
+/assets/
+
+# One authoritative executable: build/MyLISP.nex.
+/examples/*.nex
+
+# Publish only the portable build task from local editor settings.
+/.vscode/*
+!/.vscode/tasks.json
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

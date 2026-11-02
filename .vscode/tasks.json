@@ -1,0 +1,58 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compilar MyLISP con bancos 8K - 28 MHz",
+            "type": "shell",
+            "command": "zcc",
+            "args": [
+                "+zxn",
+                "-DMYLISP_CPU_28",
+                "${workspaceFolder}\\src\\cpu_next.c",
+                "${workspaceFolder}\\src\\control.c",
+                "${workspaceFolder}\\src\\recuperacion.c",
+                "-DMYLISP_BANCOS_CODIGO",
+                "-pragma-define:CRT_ORG_PAGE_95=0xC000",
+                "${workspaceFolder}\\src\\teclado_next.c",
+                "${workspaceFolder}\\src\\bancos_codigo.c",
+                "${workspaceFolder}\\src\\mapa_alto.asm",
+                "${workspaceFolder}\\src\\bancos\\banner.c",
+                "-pragma-define:CRT_ORG_PAGE_90=0xC000",
+                "-pragma-define:CRT_ORG_PAGE_91=0xC000",
+                "-pragma-define:CRT_ORG_PAGE_92=0xC000",
+                "-pragma-define:CRT_ORG_PAGE_93=0xC000",
+                "-pragma-define:CRT_ORG_PAGE_94=0xC000",
+                "-I${workspaceFolder}\\src",
+                "${workspaceFolder}\\src\\repl.c",
+                "${workspaceFolder}\\src\\bancos\\banco_eval.c",
+                "${workspaceFolder}\\src\\bancos\\banco_eval_iterativo.c",
+                "${workspaceFolder}\\src\\pila_tareas.c",
+                "${workspaceFolder}\\src\\bancos\\banco_gc.c",
+                "${workspaceFolder}\\src\\load.c",
+                "${workspaceFolder}\\src\\entrada_multilinea.c",
+                "${workspaceFolder}\\src\\parser.c",
+                "${workspaceFolder}\\src\\printer.c",
+                "${workspaceFolder}\\src\\bancos\\banco_lexer.c",
+                "${workspaceFolder}\\src\\heap_ops.c",
+                "${workspaceFolder}\\src\\heap_paged.c",
+                "${workspaceFolder}\\src\\messages_en.c",
+                "-pragma-redirect:CRT_FONT_64=_font_8x8_bbc_system",
+                "-clib=classic",
+                "-lndos",
+                "-lesxdos",
+                "-lm",
+                "-create-app",
+                "-subtype=nex",
+                "-pragma-define:CLIB_EXIT_STACK_SIZE=0",
+                "-m",
+                "-o",
+                "${workspaceFolder}\\build\\MyLISP"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
