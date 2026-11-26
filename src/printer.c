@@ -2,16 +2,15 @@
 #include <stdio.h>
 #include "printer.h"
 
-void PrintExpr(CellIdx idx) __z88dk_fastcall {
-    /* locales automaticos (NO static): PrintExpr es recursiva (caso
-       TPAIR se llama a si misma), asi que cada invocacion necesita su
-       propia copia de estas variables -- si fueran static, dos
-       llamadas anidadas (una lista dentro de otra) compartirian la
-       misma variable y se corromperian entre si. */
+static unsigned char nivelImpresion;
+
+/* Impresion de un atomo. Funcion HOJA aparte: sus buffers locales
+   (nombre/texto) ya no forman parte del marco de la funcion recursiva,
+   que asi queda en unos pocos bytes por nivel. */
+static void PrintAtomo(CellIdx idx) __z88dk_fastcall {
     CellIdx inner, numcell, dencell;
     char nombre[SYMLEN + 1];
     char texto[MAXSTRLEN + 1];
-    DIAG_PILA();
 
     switch (GetTag(idx)) {
         case TNIL:
@@ -47,24 +46,36 @@ void PrintExpr(CellIdx idx) __z88dk_fastcall {
 #endif
             break;
 
-        case TPAIR:
-            printf("(");
-            PrintExpr(GetCar(idx));
-            idx = GetCdr(idx);
-            while (GetTag(idx) == TPAIR) {
-                printf(" ");
-                PrintExpr(GetCar(idx));
-                idx = GetCdr(idx);
-            }
-            if (GetTag(idx) != TNIL) {
-                printf(" . ");
-                PrintExpr(idx);
-            }
-            printf(")");
-            break;
-
         default:
             printf("?");
             break;
     }
+}
+
+void PrintExpr(CellIdx idx) __z88dk_fastcall {
+    DIAG_PILA();
+
+    if (GetTag(idx) != TPAIR) {
+        PrintAtomo(idx);
+        return;
+    }
+    if (nivelImpresion >= PRINT_PROFUNDIDAD_MAX) {
+        printf("...");
+        return;
+    }
+    nivelImpresion++;
+    printf("(");
+    PrintExpr(GetCar(idx));
+    idx = GetCdr(idx);
+    while (GetTag(idx) == TPAIR) {
+        printf(" ");
+        PrintExpr(GetCar(idx));
+        idx = GetCdr(idx);
+    }
+    if (GetTag(idx) != TNIL) {
+        printf(" . ");
+        PrintAtomo(idx);
+    }
+    printf(")");
+    nivelImpresion--;
 }

@@ -51,7 +51,11 @@ static void put32(unsigned char *b, long v) {
 static long get32(const unsigned char *b) {
     unsigned long u = (unsigned long)b[0] | ((unsigned long)b[1] << 8) |
                        ((unsigned long)b[2] << 16) | ((unsigned long)b[3] << 24);
+#ifdef __LP64__
+    return (long)(int)(unsigned int)u;   /* solo tests en host (long de 64 bits): extiende el signo */
+#else
     return (long)u;
+#endif
 }
 
 static CellIdx freelist = FREELIST_NONE;
@@ -318,6 +322,12 @@ CellIdx GetClosureEnv(CellIdx idx) {
 void SetCar(CellIdx idx, CellIdx nuevoCar) {
     heap_get_cell(idx, bytes);
     put16(&bytes[1], nuevoCar);
+    heap_put_cell(idx, bytes);
+}
+
+void SetCdr(CellIdx idx, CellIdx nuevoCdr) {
+    heap_get_cell(idx, bytes);
+    put16(&bytes[3], nuevoCdr);
     heap_put_cell(idx, bytes);
 }
 

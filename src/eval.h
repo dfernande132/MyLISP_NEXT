@@ -45,4 +45,12 @@ CellIdx Eval(CellIdx expr, CellIdx env);
 CellIdx Apply(CellIdx fn, CellIdx args, CellIdx env);
 CellIdx EvalList(CellIdx lst, CellIdx env);
 
+/* Topes de profundidad (ver doc_interna, medicion de pila en Z80N):
+   - EQUAL recorre el CDR con un bucle y recursa solo por CAR (~10 bytes de
+     pila por nivel); mas alla de EQUAL_PROFUNDIDAD_MAX da ERR.
+   - El builtin EVAL reentra en EvalIterativo (~56 bytes por nivel); el
+     tope equivale al EvalTope=6 de MEGA65/C64 (activacion externa + 5). */
+#define EQUAL_PROFUNDIDAD_MAX 32
+#define EVAL_PROFUNDIDAD_MAX  5
+
 #endif

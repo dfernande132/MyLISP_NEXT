@@ -5,6 +5,7 @@
 
 # Internal development history and tests (kept locally).
 /docs/
+/doc_interna/
 /tests/
 /*.md
 !/README.md

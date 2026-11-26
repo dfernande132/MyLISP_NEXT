@@ -14,7 +14,7 @@ void RecuperarRecursos(void);
    compacta. Puntos admitidos: REPL, fin de una expresion de LOAD y
    CLEAN. No invocar desde NewCell ni desde constructores/builtins con
    temporales vivos solo en C: esos puntos requeririan mas raices.
-   El marcado aun usa recursion para CAR/cuerpos anidados. */
+   El marcado recursa por CAR/cuerpos con tope (PROF_MARCADO) y recoge el resto con pasadas sobre el heap. */
 void CollectGarbage(CellIdx raizExtra1, CellIdx raizExtra2);
 
 /* 1 si conviene disparar el GC ahora: LiveUsagePercent >= umbral, O

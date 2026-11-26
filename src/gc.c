@@ -3,9 +3,19 @@
 #include "pila_tareas.h"
 
 /* Seguir CDR/entorno como un bucle: la longitud de una lista plana
-   ya no anade marcos de C. La recursion por CAR/cuerpos anidados sigue
-   existiendo y se tratara por separado. Marcar antes de seguir aristas
-   permite terminar tambien cuando hay ciclos de clausuras/entornos. */
+   ya no anade marcos de C. La recursion por CAR/cuerpos anidados esta
+   ACOTADA por PROF_MARCADO: al llegar al tope el hijo se deja sin
+   marcar y se anota en marcaTruncada; RemarcarTruncados() lo recoge
+   despues con pasadas sobre el heap (siempre correcto, solo mas lento
+   en estructuras muy anidadas). Marcar antes de seguir aristas permite
+   terminar tambien cuando hay ciclos de clausuras/entornos. */
+#ifndef PROF_MARCADO
+#define PROF_MARCADO 32
+#endif
+
+static unsigned char profMarca;
+static unsigned char marcaTruncada;
+
 static void MarkCell(CellIdx idx) {
     unsigned char t;
     DIAG_PILA();
@@ -15,7 +25,13 @@ static void MarkCell(CellIdx idx) {
         t = GetTag(idx);
         switch (t) {
             case TPAIR:
-                MarkCell(GetCar(idx));
+                if (profMarca < PROF_MARCADO) {
+                    profMarca++;
+                    MarkCell(GetCar(idx));
+                    profMarca--;
+                } else {
+                    marcaTruncada = 1;
+                }
                 idx = GetCdr(idx);
                 break;
             case TRAT:
@@ -23,13 +39,52 @@ static void MarkCell(CellIdx idx) {
                 idx = GetCar(idx);
                 break;
             case TCLOSURE:
-                MarkCell(GetClosureParams(idx));
-                MarkCell(GetClosureBody(idx));
+                if (profMarca < PROF_MARCADO) {
+                    profMarca++;
+                    MarkCell(GetClosureParams(idx));
+                    MarkCell(GetClosureBody(idx));
+                    profMarca--;
+                } else {
+                    marcaTruncada = 1;
+                }
                 idx = GetClosureEnv(idx);
                 break;
             default:
                 return;
         }
+    }
+}
+
+/* Si el marcado se trunco, recorre el heap buscando celdas marcadas
+   con hijos sin marcar y los marca partiendo de profundidad 0. Alterna
+   sentido ascendente/descendente para converger rapido segun el orden
+   de creacion de la estructura. Cada pasada con truncado marca al
+   menos una celda nueva, asi que termina. */
+static void RemarcarTruncados(void) {
+    CellIdx tope, n, i;
+    unsigned char descendente = 0;
+
+    while (marcaTruncada) {
+        marcaTruncada = 0;
+        tope = HeapNextFree();
+        for (n = 0; n < tope; n++) {
+            i = descendente ? (CellIdx)(tope - 1 - n) : n;
+            if (!GetMark(i)) continue;
+            switch (GetTag(i)) {
+                case TPAIR:
+                    MarkCell(GetCar(i));
+                    MarkCell(GetCdr(i));
+                    break;
+                case TCLOSURE:
+                    MarkCell(GetClosureParams(i));
+                    MarkCell(GetClosureBody(i));
+                    MarkCell(GetClosureEnv(i));
+                    break;
+                default:
+                    break;
+            }
+        }
+        descendente = !descendente;
     }
 }
 
@@ -101,6 +156,8 @@ void CollectGarbage(CellIdx raizExtra1, CellIdx raizExtra2) {
        y marcar lo alcanzable desde las raices (esto si es celda a
        celda, porque sigue punteros arbitrarios, no es secuencial) */
     HeapClearMarks(tope);
+    profMarca = 0;
+    marcaTruncada = 0;
     MarkCell(NIL_CELL);
     MarkCell(raizExtra1);
     MarkCell(raizExtra2);
@@ -116,6 +173,8 @@ void CollectGarbage(CellIdx raizExtra1, CellIdx raizExtra2) {
                               ((unsigned int)tarea[j + 1] << 8)));
         }
     }
+
+    RemarcarTruncados();
 
     /* FASE 2: barrer el heap principal (delegado en heap_ops.c, por
        bloques de pagina) */

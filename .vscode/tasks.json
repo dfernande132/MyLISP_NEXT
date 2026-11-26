@@ -33,6 +33,7 @@
                 "${workspaceFolder}\\src\\parser.c",
                 "${workspaceFolder}\\src\\printer.c",
                 "${workspaceFolder}\\src\\bancos\\banco_lexer.c",
+                "${workspaceFolder}\\src\\bancos\\banco_aritmetica.c",
                 "${workspaceFolder}\\src\\heap_ops.c",
                 "${workspaceFolder}\\src\\heap_paged.c",
                 "${workspaceFolder}\\src\\messages_en.c",

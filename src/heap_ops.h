@@ -93,6 +93,10 @@ CellIdx       GetClosureEnv(CellIdx idx) __z88dk_fastcall;
    al lenguaje Lisp; el resto de MyLISP sigue siendo deliberadamente
    inmutable (sin SETQ). */
 void SetCar(CellIdx idx, CellIdx nuevoCar);
+/* Igual que SetCar pero para el CDR. Solo para construir listas de
+   forma iterativa (parser, APPEND) con puntero a la ultima celda; no
+   se expone al lenguaje Lisp. */
+void SetCdr(CellIdx idx, CellIdx nuevoCdr);
 
 /* --- soporte del GC mark-sweep ---
    El byte de "mark" (bytes[7] de cada celda, puesto a 0 por todos los

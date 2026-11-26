@@ -1,4 +1,4 @@
-# MyLISP for ZX Spectrum Next — v1.0
+# MyLISP for ZX Spectrum Next — v1.1
 
 MyLISP is a LISP-1 interpreter for the ZX Spectrum Next, written in C with
 z88dk for NextZXOS. It includes lexical closures, an iterative evaluator,
@@ -67,6 +67,7 @@ include several original modules and would cause duplicate definitions.
 | `build.py` | Python build entry point for Windows/Linux. |
 | `build/MyLISP.nex` | Ready-to-run executable. |
 | `examples/` | User programs and regression examples. |
+| `doc/` | Technical reference, Spanish (`REFERENCIA_TECNICA_NEXT.md`) and English (`TECHNICAL_REFERENCE_NEXT_EN.md`). |
 | `screenshots/` | Images used by this README. |
 | `LICENSE` | MIT license for sources and build configuration. |
 
@@ -114,10 +115,15 @@ GC pass or blocking I/O may finish first. Effects already performed are retained
 | String | 36 characters; longer strings are truncated. |
 | Complete expression | 500 characters. |
 | Evaluation task stack | 8,192 tasks. |
+| Parser nesting (parentheses and quotes) | 40 levels; deeper gives `ERR: nested too deeply`. |
+| Nested `EVAL` | 5 levels; deeper gives `ERR: EVAL nested too deeply`. |
+| `EQUAL` nesting | 32 levels; deeper gives `ERR: nested too deeply`. |
+| Printer nesting | 64 levels; deeper levels are printed as `...`. |
 
-The iterative evaluator uses explicit tasks, but parsing, printing and some
-list/GC operations still use C recursion. Deep structures can exhaust the native
-Z80 stack; the iterative evaluator does not eliminate every native stack limit.
+User-level recursion does not use the Z80 stack: the iterative evaluator keeps
+its pending work in the task stack. Parsing, printing, `EQUAL` and GC marking
+still use C recursion, so each has a depth limit (table above) that keeps the
+native stack within its reserve. `APPEND` is iterative.
 
 Automatic GC runs between expressions, at 80% occupancy in the REPL and 50%
 during LOAD, considering heap cells and string entries. A single expression
@@ -126,11 +132,20 @@ exhaustion, the expression is abandoned, GC runs and control returns to the prom
 Valid global definitions are retained; the expression is not retried.
 
 GC reclaims unreachable cells and strings, but not interned symbols. Use NEW to
-clear the symbol table. Nested LOAD is a known limitation: the reader shares state.
+clear the symbol table. `LOAD` cannot be nested: a `LOAD` inside a file that is
+being loaded is rejected with `ERR: nested LOAD` (the reader shares state). A `LOAD`
+typed at the prompt, or reached through `EVAL` (up to 5 levels), is fine.
 
-Integer and native z88dk floating-point arithmetic are supported. Rational literals
-can be read, represented and printed and are recognized by NUMBERP; general
-arithmetic primitives work on integers and floats, without full rational arithmetic.
+## Numbers
+
+Integers are 32-bit signed (±2,147,483,647). Rationals are exact: `(/ 1 3)` is `1/3`,
+`(/ 4 6)` is `2/3`, `(+ 1/2 1/3)` is `5/6`, and a rational literal is normalized when
+read (`4/8` is `1/2`, `6/3` is `2`). Results are always reduced and collapse to an
+integer when the denominator is 1. `+ - * /` and the comparators `= < > <= >=` accept
+integers and rationals; comparisons are exact (`(= 1/3 0.3333)` is `NIL`). A result that
+would leave the 32-bit range gives `ERR: overflow` instead of a wrong number.
+Floating point (native z88dk, 6 bytes) appears only when a literal has a decimal point,
+and one float operand makes the whole operation float. `DIV` and `MOD` take integers only.
 
 ## Memory map and banked calls
 
@@ -155,12 +170,12 @@ CPU address space                    Physical pages selected as needed
 
 $FFFF  +-------------------------+
        | Native stack, grows down|   MMU7 stays fixed
-$F4CF  +-------------------------+   Current static end (exclusive)
+$F53E  +-------------------------+   Current static end (exclusive)
        | Fixed RODATA / DATA / BSS|
 $E000  +-------------------------+
        | Code/resource window    | <--- 90 eval       93 banner/help
        |          MMU6           |      91 evaluator  94 GC
-$C000  +-------------------------+      92 lexer      95 keyboard
+$C000  +-------------------------+      92 lexer+math 95 keyboard
        | Resident code, libraries|
        | and call trampolines    |
 $8000  +-------------------------+
@@ -172,9 +187,9 @@ $4000  +-------------------------+
 $0000  +-------------------------+
 ```
 
-The current normal build has 15,016 bytes of resident code below `$C000`,
-5,327 bytes of fixed constants/data/BSS from `$E000`, and a **nominal native
-stack margin of 2,864 bytes** up to the configured SP of `$FFFF`. These are
+The current normal build has 15,432 bytes of resident code below `$C000`,
+5,438 bytes of fixed constants/data/BSS from `$E000`, and a **nominal native
+stack margin of 2,753 bytes** up to the configured SP of `$FFFF`. These are
 link-map figures, not a guarantee of free stack during every operation.
 Rebuilding with another compiler revision may change them.
 
@@ -187,11 +202,11 @@ Page numbers below refer to **8 KB physical pages**, not CPU addresses.
 | 49 | 1 × 8 KB | 512 symbols × 9 bytes + 90 strings × 37 bytes: 7,938 bytes used, 254 free. |
 | 50–81 | 32 × 8 KB | 32,768 heap cells × 8 bytes: 256 KiB. |
 | 82–89 | 8 × 8 KB | 8,192 evaluation tasks × 8 bytes: 64 KiB. |
-| 90 | 1 × 8 KB | Evaluation entry, environments and primitives (`eval.c`); 5,902 code bytes. |
+| 90 | 1 × 8 KB | Evaluation entry, environments and primitives (`eval.c`); 4,790 code bytes. |
 | 91 | 1 × 8 KB | Iterative evaluator (`eval_iterativo.c`); 4,355 code bytes. |
-| 92 | 1 × 8 KB | Lexer (`lexer.c`); 2,404 code bytes. |
+| 92 | 1 × 8 KB | Lexer (`lexer.c`) and exact arithmetic (`aritmetica.c`, `racional.c`); 6,819 code bytes. |
 | 93 | 1 × 8 KB | Banner and help text; 2,215 resource bytes. |
-| 94 | 1 × 8 KB | Garbage collector (`gc.c`); 1,024 code bytes. |
+| 94 | 1 × 8 KB | Garbage collector (`gc.c`); 1,303 code bytes. |
 | 95 | 1 × 8 KB | Keyboard, line editing and display setup (`teclado_next.c`); 2,027 code bytes. |
 
 The evaluation task stack is separate from the native Z80 stack. Heap objects
@@ -279,6 +294,15 @@ is prohibited. These binary distribution terms do not restrict rights granted
 for the MIT-licensed sources.
 
 Example scripts in `examples/` are in the public domain; use and modify them freely.
+
+## Version 1.1 highlights
+
+- Stability release: several recursive blocks are now iterative or depth-guarded (parser, `APPEND`, `EQUAL`, printer, garbage-collector marking), and nested `EVAL` (max 5 levels) and nested `LOAD` are rejected with a clear error instead of overflowing the Z80 stack.
+- Exact arithmetic: rational numbers take part in `+ - * /` and in all comparators; results are always reduced (`(/ 1 3)` is `1/3`, `(/ 4 6)` is `2/3`) and rational literals are normalized (`4/8` is `1/2`).
+- `ERR: overflow` is raised before a result leaves the 32-bit integer range, instead of returning a wrong number silently.
+- Numeric comparators now work for the whole 32-bit range (v1.0 returned wrong results for some large values) and reject non-numeric arguments.
+- `examples/REGRESS.LSP` is the common regression suite of all MyLISP ports and reports failures honestly.
+- Technical reference in Spanish and English in `doc/`; the in-program `HELP` text now describes the exact arithmetic.
 
 ## Version 1.0 highlights
 

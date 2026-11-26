@@ -1,7 +1,7 @@
 #include "messages.h"
 
 const char *MSG_TITULO         = "  MyLISP -- LISP interpreter";
-const char *MSG_VERSION        = "  v1.0 - Spectrum Next";
+const char *MSG_VERSION        = "  v1.1 - Spectrum Next";
 const char *MSG_COPYRIGHT      = "  (c) 2026 dfsantos";
 const char *MSG_ESCRIBE_SALIR  = "  Type BYE to exit or HELP for basic help";
 
@@ -21,11 +21,15 @@ const char *MSG_NO_APLICABLE           = "ERR: not applicable";
 const char *MSG_ARGUMENTOS_INCORRECTOS = "ERR: wrong args";
 const char *MSG_REQUIERE_ARGUMENTOS    = "ERR: missing argument";
 const char *MSG_DIVISION_CERO          = "ERR: division by zero";
+const char *MSG_DESBORDAMIENTO         = "ERR: overflow";
 const char *MSG_TIPO_NO_EVALUABLE      = "ERR: type not evaluable";
 const char *MSG_ESPERABA_ENTERO        = "ERR: expected integer";
 const char *MSG_LOAD_ESPERA_STRING     = "ERR: LOAD needs name";
 const char *MSG_REQUIERE_LISTA         = "ERR: expected list";
 const char *MSG_ESPERABA_SIMBOLO       = "ERR: expected symbol/str";
+const char *MSG_DEMASIADO_ANIDADO      = "ERR: nested too deeply";
+const char *MSG_EVAL_ANIDADO           = "ERR: EVAL nested too deeply";
+const char *MSG_LOAD_ANIDADO           = "ERR: nested LOAD";
 
 const char *MSG_STATUS_HEAP      = "Heap: ";
 const char *MSG_STATUS_SIMBOLOS  = "Symbols: ";

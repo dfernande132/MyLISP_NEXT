@@ -6,6 +6,11 @@
 /* simbolos especiales, interned una vez por parser_init() */
 extern unsigned int SYM_QUOTE;
 
+/* Tope de anidamiento (parentesis + comillas) por expresion. Cada nivel
+   cuesta un marco de ParseExpr y otro de ParseList en la pila nativa;
+   el valor se calibra con la medicion de pila (ver doc_interna). */
+#define PARSER_PROFUNDIDAD_MAX 40
+
 void parser_init(void);
 
 /* ParseExpr consume el token actual (LastType/LastText/...) y construye

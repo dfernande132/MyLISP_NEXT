@@ -1,7 +1,7 @@
 #include "messages.h"
 
 const char *MSG_TITULO         = "  MyLISP -- interprete LISP";
-const char *MSG_VERSION        = "  v1.0 - Spectrum Next";
+const char *MSG_VERSION        = "  v1.1 - Spectrum Next";
 const char *MSG_COPYRIGHT      = "  (c) 2026 dfsantos";
 const char *MSG_ESCRIBE_SALIR  = "  Escribe BYE para terminar o HELP para ayuda basica";
 
@@ -21,10 +21,14 @@ const char *MSG_NO_APLICABLE           = "ERR: no aplicable";
 const char *MSG_ARGUMENTOS_INCORRECTOS = "ERR: args incorrectos";
 const char *MSG_REQUIERE_ARGUMENTOS    = "ERR: falta argumento";
 const char *MSG_DIVISION_CERO          = "ERR: division por cero";
+const char *MSG_DESBORDAMIENTO         = "ERR: desbordamiento";
 const char *MSG_TIPO_NO_EVALUABLE      = "ERR: tipo no evaluable";
 const char *MSG_ESPERABA_ENTERO        = "ERR: entero esperado";
 const char *MSG_LOAD_ESPERA_STRING     = "ERR: LOAD sin nombre";
 const char *MSG_REQUIERE_LISTA         = "ERR: lista esperada";
+const char *MSG_DEMASIADO_ANIDADO      = "ERR: demasiado anidado";
+const char *MSG_EVAL_ANIDADO           = "ERR: EVAL demasiado anidado";
+const char *MSG_LOAD_ANIDADO           = "ERR: LOAD anidado";
 const char *MSG_ESPERABA_SIMBOLO       = "ERR: simbolo/str esperado";
 
 const char *MSG_STATUS_HEAP      = "Heap: ";

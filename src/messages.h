@@ -25,11 +25,15 @@ extern const char *MSG_NO_APLICABLE;
 extern const char *MSG_ARGUMENTOS_INCORRECTOS;
 extern const char *MSG_REQUIERE_ARGUMENTOS;
 extern const char *MSG_DIVISION_CERO;
+extern const char *MSG_DESBORDAMIENTO;
 extern const char *MSG_TIPO_NO_EVALUABLE;
 extern const char *MSG_ESPERABA_ENTERO;
 extern const char *MSG_LOAD_ESPERA_STRING;
 extern const char *MSG_REQUIERE_LISTA;
 extern const char *MSG_ESPERABA_SIMBOLO;
+extern const char *MSG_DEMASIADO_ANIDADO;       /* parser / EQUAL */
+extern const char *MSG_EVAL_ANIDADO;            /* EVAL dentro de EVAL */
+extern const char *MSG_LOAD_ANIDADO;            /* LOAD dentro de LOAD */
 
 /* --- Grupo G: sistema (STATUS/CLEAN/NEW/SYMBOLS) --- */
 extern const char *MSG_STATUS_HEAP;

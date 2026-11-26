@@ -2,6 +2,7 @@
 #include <arch/zxn.h>
 #include "heap_ops.h"
 #include "bancos_codigo.h"
+#include "aritmetica.h"
 #include "colors.h"
 #include "teclado.h"
 extern const char AyudaTexto[];
@@ -189,6 +190,24 @@ void NextToken(void) {
     SeleccionarCodigo(92);
     Real_NextToken();
     SeleccionarCodigo(antes);
+}
+extern CellIdx Real_Aritmetica(CellIdx args, int op);
+CellIdx Aritmetica(CellIdx args, int op) {
+    unsigned char antes = CodigoPaginaActual;
+    CellIdx resultado;
+    SeleccionarCodigo(92);
+    resultado = Real_Aritmetica(args, op);
+    SeleccionarCodigo(antes);
+    return resultado;
+}
+extern int Real_CompararNumeros(CellIdx ca, CellIdx cb, int *cmp);
+int CompararNumeros(CellIdx ca, CellIdx cb, int *cmp) {
+    unsigned char antes = CodigoPaginaActual;
+    int resultado;
+    SeleccionarCodigo(92);
+    resultado = Real_CompararNumeros(ca, cb, cmp);
+    SeleccionarCodigo(antes);
+    return resultado;
 }
 extern void Real_CollectGarbage(CellIdx raiz1, CellIdx raiz2);
 void CollectGarbage(CellIdx raiz1, CellIdx raiz2) {

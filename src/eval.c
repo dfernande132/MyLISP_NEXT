@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "eval.h"
+#include "aritmetica.h"
 #include "lexer.h"
 #include "parser.h"
 #include "load.h"
@@ -49,22 +50,11 @@ int EsBuiltin(unsigned int sym);
 CellIdx AplicarBuiltin(unsigned int sym, CellIdx args);
 static CellIdx AppendLists(CellIdx a, CellIdx b);
 static int EqualStruct(CellIdx a, CellIdx b);
+
+static unsigned char nivelEval;
+static CellIdx resultadoEval;
 static int NodeToStr(CellIdx idx, char *out);
 static int ObtenerTextoEstricto(CellIdx c, char *out);
-
-#ifndef MYLISP_SIN_FLOTANTES
-/* Aritmetica mixta entero/flotante: promociona a float solo cuando
-   hace falta, dejando el camino entero puro intacto (sin pasar por
-   aqui) cuando todos los operandos son TINT -- para no arriesgar
-   precision ni tocar el comportamiento ya probado con enteros. */
-static float ValorComoFloat(CellIdx c) __z88dk_fastcall {
-    return (GetTag(c) == TFLOAT) ? GetFloatValue(c) : (float)GetIntValue(c);
-}
-static int EsNumerico(CellIdx c) __z88dk_fastcall {
-    unsigned char t = GetTag(c);
-    return t == TINT || t == TFLOAT;
-}
-#endif
 
 void eval_init(void) {
     EvalError = 0;
@@ -199,7 +189,8 @@ void DefineGlobal(unsigned int symidx, CellIdx valor) {
    falta el chequeo de SP_FLOOR_SEGURO que tenia esta funcion antes.
 
    LOAD usa el evaluador reentrante; el lector de ficheros conserva
-   estado compartido y LOAD anidado sigue pendiente. */
+   estado compartido, por eso un LOAD dentro de otro LOAD se rechaza
+   (ERR: nested LOAD, ver load.c). */
 CellIdx Eval(CellIdx expr, CellIdx env) {
     return EvalIterativo(expr, env);
 }
@@ -219,7 +210,7 @@ CellIdx EvalStatus(void) {
 
 /* (CLEAN): el GC conserva ahora las referencias de todas las tareas,
    incluidos los entornos locales de LET y contextos EVAL/LOAD.
-   El marcado de estructuras profundamente anidadas aun consume pila. */
+   El marcado recursivo esta acotado (PROF_MARCADO en gc.c). */
 CellIdx EvalClean(void) {
     INK(COLOR_GC);
     printf("%s%ld%% nstrs=%u\n", MSG_CLEAN_ANTES, LiveUsagePercent(), nstrs);
@@ -295,150 +286,6 @@ int EsBuiltin(unsigned int sym) {
            sym == SYM_SYMNAME || sym == SYM_STRLT || sym == SYM_STRCAT;
 }
 
-#define OP_SUMA  0
-#define OP_RESTA 1
-#define OP_MULT  2
-#define OP_DIV   3
-
-/* +  y  x  recorren TODOS los argumentos desde el principio, sin
-   tratamiento especial del primero -- comparten esta funcion, solo
-   cambia el operador (suma/producto) y el valor inicial. */
-static CellIdx AritAcumulativa(CellIdx args, int op) {
-    long acumulador = (op == OP_MULT) ? 1 : 0;
-#ifndef MYLISP_SIN_FLOTANTES
-    float facc = (op == OP_MULT) ? 1.0f : 0.0f;
-    int hayFloat = 0;
-#endif
-    while (GetTag(args) == TPAIR) {
-        CellIdx c = GetCar(args);
-#ifndef MYLISP_SIN_FLOTANTES
-        if (!EsNumerico(c)) {
-#else
-        if (GetTag(c) != TINT) {
-#endif
-            EvalError = 1;
-            INK(COLOR_ERROR);
-            printf("%s\n", MSG_ESPERABA_ENTERO);
-            return NIL_CELL;
-        }
-#ifndef MYLISP_SIN_FLOTANTES
-        if (GetTag(c) == TFLOAT) {
-            hayFloat = 1;
-            if (op == OP_MULT) facc *= GetFloatValue(c); else facc += GetFloatValue(c);
-        } else {
-            long v = GetIntValue(c);
-            if (op == OP_MULT) { acumulador *= v; facc *= (float)v; }
-            else { acumulador += v; facc += (float)v; }
-        }
-#else
-        {
-            long v = GetIntValue(c);
-            if (op == OP_MULT) acumulador *= v; else acumulador += v;
-        }
-#endif
-        args = GetCdr(args);
-    }
-#ifndef MYLISP_SIN_FLOTANTES
-    if (hayFloat) return MakeFloat(facc);
-#endif
-    return MakeInt(acumulador);
-}
-
-/* -  y  /  tratan el primer argumento aparte (para la negacion/
-   division unaria) y luego recorren el resto -- comparten esta
-   funcion, solo cambia el operador (resta/division). */
-static CellIdx AritConPrimero(CellIdx args, int op) {
-    CellIdx primero, resto;
-    long acumulador;
-#ifndef MYLISP_SIN_FLOTANTES
-    float facc;
-    int hayFloat;
-#endif
-
-    if (GetTag(args) != TPAIR) {
-        EvalError = 1;
-        INK(COLOR_ERROR);
-        printf("%s\n", MSG_REQUIERE_ARGUMENTOS);
-        return NIL_CELL;
-    }
-    primero = GetCar(args);
-    resto = GetCdr(args);
-#ifndef MYLISP_SIN_FLOTANTES
-    if (!EsNumerico(primero)) {
-#else
-    if (GetTag(primero) != TINT) {
-#endif
-        EvalError = 1;
-        INK(COLOR_ERROR);
-        printf("%s\n", MSG_ESPERABA_ENTERO);
-        return NIL_CELL;
-    }
-
-    acumulador = GetIntValue(primero);
-#ifndef MYLISP_SIN_FLOTANTES
-    facc = ValorComoFloat(primero);
-    hayFloat = (GetTag(primero) == TFLOAT);
-#endif
-
-    if (op == OP_RESTA && GetTag(resto) != TPAIR) {
-        /* negacion unaria: solo para resta con un solo argumento --
-           (/ x) con un solo argumento cae en el bucle de abajo, que
-           no hace nada, y devuelve x sin cambios (igual que antes) */
-#ifndef MYLISP_SIN_FLOTANTES
-        return hayFloat ? MakeFloat(-facc) : MakeInt(-acumulador);
-#else
-        return MakeInt(-acumulador);
-#endif
-    }
-
-    while (GetTag(resto) == TPAIR) {
-        CellIdx c = GetCar(resto);
-#ifndef MYLISP_SIN_FLOTANTES
-        if (!EsNumerico(c)) {
-#else
-        if (GetTag(c) != TINT) {
-#endif
-            EvalError = 1;
-            INK(COLOR_ERROR);
-            printf("%s\n", MSG_ESPERABA_ENTERO);
-            return NIL_CELL;
-        }
-        if (op == OP_DIV) {
-#ifndef MYLISP_SIN_FLOTANTES
-            if (ValorComoFloat(c) == 0.0f) {
-#else
-            if (GetIntValue(c) == 0) {
-#endif
-                EvalError = 1;
-                INK(COLOR_ERROR);
-                printf("%s\n", MSG_DIVISION_CERO);
-                return NIL_CELL;
-            }
-        }
-#ifndef MYLISP_SIN_FLOTANTES
-        if (GetTag(c) == TFLOAT) {
-            hayFloat = 1;
-            if (op == OP_DIV) facc /= GetFloatValue(c); else facc -= GetFloatValue(c);
-        } else {
-            long v = GetIntValue(c);
-            if (op == OP_DIV) { acumulador /= v; facc /= (float)v; }
-            else { acumulador -= v; facc -= (float)v; }
-        }
-#else
-        {
-            long v = GetIntValue(c);
-            if (op == OP_DIV) acumulador /= v; else acumulador -= v;
-        }
-#endif
-        resto = GetCdr(resto);
-    }
-#ifndef MYLISP_SIN_FLOTANTES
-    return hayFloat ? MakeFloat(facc) : MakeInt(acumulador);
-#else
-    return MakeInt(acumulador);
-#endif
-}
-
 CellIdx AplicarBuiltin(unsigned int sym, CellIdx args) {
     if (sym == SYM_HELP) {
         if (GetTag(args) != TNIL) {
@@ -449,10 +296,10 @@ CellIdx AplicarBuiltin(unsigned int sym, CellIdx args) {
         CodigoAyuda();
         return MakeSym(SYM_VOID);
     }
-    if (sym == SYM_PLUS)   return AritAcumulativa(args, OP_SUMA);
-    if (sym == SYM_TIMES)  return AritAcumulativa(args, OP_MULT);
-    if (sym == SYM_MINUS)  return AritConPrimero(args, OP_RESTA);
-    if (sym == SYM_DIVIDE) return AritConPrimero(args, OP_DIV);
+    if (sym == SYM_PLUS)   return Aritmetica(args, OP_SUMA);
+    if (sym == SYM_TIMES)  return Aritmetica(args, OP_MULT);
+    if (sym == SYM_MINUS)  return Aritmetica(args, OP_RESTA);
+    if (sym == SYM_DIVIDE) return Aritmetica(args, OP_DIV);
 
     /* --- Grupo A: primitivas de listas --- */
 
@@ -512,7 +359,16 @@ CellIdx AplicarBuiltin(unsigned int sym, CellIdx args) {
            el dato-expresion); lo evaluamos otra vez en GlobalEnv para
            metaprogramacion: construir expresiones como datos y
            evaluarlas despues */
-        return Eval(GetCar(args), GlobalEnv);
+        if (nivelEval >= EVAL_PROFUNDIDAD_MAX) {
+            EvalError = 1;
+            INK(COLOR_ERROR);
+            printf("%s\n", MSG_EVAL_ANIDADO);
+            return NIL_CELL;
+        }
+        nivelEval++;
+        resultadoEval = Eval(GetCar(args), GlobalEnv);
+        nivelEval--;
+        return resultadoEval;
     }
 
     /* --- Grupo B: predicados de tipo --- */
@@ -643,17 +499,8 @@ CellIdx AplicarBuiltin(unsigned int sym, CellIdx args) {
     }
     {
         int cmp;
-#ifndef MYLISP_SIN_FLOTANTES
-        if (GetTag(GetCar(args)) == TFLOAT || GetTag(GetCar(GetCdr(args))) == TFLOAT) {
-            float a = ValorComoFloat(GetCar(args));
-            float b = ValorComoFloat(GetCar(GetCdr(args)));
-            cmp = (a < b) ? -1 : (a > b ? 1 : 0);
-        } else
-#endif
-        {
-            long a = GetIntValue(GetCar(args));
-            long b = GetIntValue(GetCar(GetCdr(args)));
-            cmp = (a < b) ? -1 : (a > b ? 1 : 0);
+        if (!CompararNumeros(GetCar(args), GetCar(GetCdr(args)), &cmp)) {
+            return NIL_CELL;
         }
 
         if (sym == SYM_EQUALS) return (cmp == 0) ? T_CELL : NIL_CELL;
@@ -703,27 +550,32 @@ static int NodeToStr(CellIdx idx, char *out) {
     }
 }
 
-/* recursiva (se llama a si misma) -- locales automaticos, NO static */
+/* Iterativa: copia la primera lista enlazando cada celda nueva al CDR
+   de la anterior (SetCdr) y deja 'b' como cola. Antes recursaba por
+   elemento y la longitud de la lista consumia pila nativa. */
 static CellIdx AppendLists(CellIdx a, CellIdx b) {
+    CellIdx cabeza = b, cola = NIL_CELL, celda;
     DIAG_PILA();
-    if (GetTag(a) == TNIL) {
-        return b;
+
+    while (GetTag(a) == TPAIR) {
+        celda = Cons(GetCar(a), b);
+        if (HeapError) return NIL_CELL;
+        if (cola == NIL_CELL) cabeza = celda;
+        else SetCdr(cola, celda);
+        cola = celda;
+        a = GetCdr(a);
     }
-    return Cons(GetCar(a), AppendLists(GetCdr(a), b));
+    return cabeza;
 }
 
-/* recursiva (caso TPAIR se llama a si misma) -- locales automaticos,
-   NO static. Distingue tipo exacto ademas de valor -- (EQUAL 3 3.0)
-   seria NIL porque un entero y un flotante son tipos distintos,
-   decision de diseno explicita del original pensando en el futuro CAS. */
-static int EqualStruct(CellIdx a, CellIdx b) {
-    unsigned char tagA = GetTag(a);
-    unsigned char tagB = GetTag(b);
-    DIAG_PILA();
-
-    if (tagA != tagB) return 0;
-
-    switch (tagA) {
+/* Comparacion de dos ATOMOS del mismo tipo. Funcion hoja aparte: sus
+   buffers (textoA/textoB, 74 bytes) no forman parte del marco de la
+   funcion recursiva. Distingue tipo exacto ademas de valor --
+   (EQUAL 3 3.0) es NIL porque un entero y un flotante son tipos
+   distintos, decision de diseno explicita del original pensando en el
+   futuro CAS. */
+static int EqualAtomo(CellIdx a, CellIdx b, unsigned char tag) {
+    switch (tag) {
         case TNIL:
             return 1;
         case TSYM:
@@ -747,10 +599,38 @@ static int EqualStruct(CellIdx a, CellIdx b) {
             return GetIntValue(GetCar(innerA)) == GetIntValue(GetCar(innerB)) &&
                    GetIntValue(GetCdr(innerA)) == GetIntValue(GetCdr(innerB));
         }
-        case TPAIR:
-            return EqualStruct(GetCar(a), GetCar(b)) &&
-                   EqualStruct(GetCdr(a), GetCdr(b));
         default:
             return 0;
+    }
+}
+
+/* Recorre el CDR con un bucle y recursa solo por CAR, con tope de
+   profundidad (nivelEqual): la longitud de las listas no consume pila,
+   y el anidamiento queda acotado. Si se supera el tope se da error. */
+static unsigned char nivelEqual;
+
+static int EqualStruct(CellIdx a, CellIdx b) {
+    unsigned char tagA;
+    int iguales;
+    DIAG_PILA();
+
+    for (;;) {
+        tagA = GetTag(a);
+        if (tagA != GetTag(b)) return 0;
+        if (tagA != TPAIR) return EqualAtomo(a, b, tagA);
+        if (nivelEqual >= EQUAL_PROFUNDIDAD_MAX) {
+            if (!EvalError) {
+                EvalError = 1;
+                INK(COLOR_ERROR);
+                printf("%s\n", MSG_DEMASIADO_ANIDADO);
+            }
+            return 0;
+        }
+        nivelEqual++;
+        iguales = EqualStruct(GetCar(a), GetCar(b));
+        nivelEqual--;
+        if (!iguales) return 0;
+        a = GetCdr(a);
+        b = GetCdr(b);
     }
 }

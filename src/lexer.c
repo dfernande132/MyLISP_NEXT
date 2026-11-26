@@ -257,6 +257,26 @@ void NextToken(void) {
                 strcpy(LastText, "DESBORDAMIENTO");
                 return;
             }
+            /* El literal se NORMALIZA aqui (igual que MEGA65): reducido por
+               el MCD y colapsado a entero si el denominador queda en 1,
+               asi 4/8 es 1/2 y 6/3 es 2. Denominador cero: error. */
+            if (denpart == 0) {
+                LastType = TOK_ERROR;
+                strcpy(LastText, "RAT?");
+                return;
+            }
+            {
+                long a = ((int)(numpart >> 16) < 0) ? -numpart : numpart;   /* signo por mitades: ver racional.c */
+                long b = denpart;
+                long t;
+                while (b != 0) { t = a % b; a = b; b = t; }
+                if (a != 1) { numpart = numpart / a; denpart = denpart / a; }
+            }
+            if (denpart == 1) {
+                LastType = TOK_INT;
+                LastInt  = numpart;
+                return;
+            }
             LastType   = TOK_RAT;
             LastRatNum = numpart;
             LastRatDen = denpart;

@@ -1,13 +1,25 @@
 ; ============================================================
 ; Banco de regresion MyLISP
-; Cargar con: (LOAD "mdv1_regresion")
+; Cargar con: (LOAD "REGRESS.LSP")
 ; Solo muestra tests que FALLAN.
-; Si aparece REGRESION-OK al final, todo es correcto.
+;
+; EL VEREDICTO DEL FINAL CUENTA FALLOS DE VERDAD (Etapa 8).
+; Antes imprimia REGRESION-OK incondicionalmente, o sea que solo
+; decia "el fichero llego al final" -- y con 62 T rodando por una
+; pantalla de 40 columnas, las dos lineas de un fallo no se ven.
+; Asi paso desapercibido durante toda la Etapa 7 que div-rat
+; fallaba. Ver decisiones 8.3.
+;
+; El contador usa DEFINE, que en MyLISP anade un binding nuevo que
+; sombrea al anterior: es la unica forma de estado mutable que hay,
+; y es deliberado (no existe SETQ).
 ; ============================================================
+
+(DEFINE FALLOS 0)
 
 (DEFUN CHECK (NOM RES ESP)
   (IF (EQUAL RES ESP) T
-    (PROGN (PRINT NOM) (PRINT RES) NIL)))
+    (PROGN (PRINT NOM) (PRINT RES) (DEFINE FALLOS (+ FALLOS 1)) NIL)))
 
 ; --- Aritmetica basica ---
 (CHECK 'suma (+ 1 2) 3)
@@ -101,7 +113,40 @@
 (DEFUN DOBLE (X) (+ X X))
 (CHECK 'MAP (MAP 'DOBLE '(1 2 3)) '(2 4 6))
 
+; --- Racionales: aritmetica exacta (Etapa 8) ---
+; Todo esto daba "se esperaba entero" o un entero truncado antes de que
+; TRAT entrase en EsNumerico(). Ver racional.h.
+(CHECK 'rat-div-inexacta (/ 1 3) 1/3)
+(CHECK 'rat-div-exacta (/ 10 2) 5)
+(CHECK 'rat-div-reduce (/ 4 6) 2/3)
+(CHECK 'rat-literal-reduce 4/8 1/2)
+(CHECK 'rat-signo (/ 10 -3) -10/3)
+(CHECK 'rat-signo2 (/ -10 -3) 10/3)
+(CHECK 'rat-suma (+ 1/2 1/3) 5/6)
+(CHECK 'rat-suma-colapsa (+ 1/3 1/3 1/3) 1)
+(CHECK 'rat-resta (- 1/2 1/3) 1/6)
+(CHECK 'rat-producto (* 2/3 3/4) 1/2)
+(CHECK 'rat-producto-colapsa (* 3 1/3) 1)
+(CHECK 'rat-division (/ 2/3 4/9) 3/2)
+(CHECK 'rat-negacion (- 1/2) -1/2)
+(CHECK 'rat-mixto-entero (+ 1 1/2) 3/2)
+(CHECK 'rat-encadenada (/ 1 3 3) 1/9)
+(CHECK 'rat-cero (* 0 1/3) 0)
+(CHECK 'rat-numberp (NUMBERP 1/3) T)
+(CHECK 'rat-equal-reduce (EQUAL 4/8 2/4) T)
+(CHECK 'rat-equal-colapso (EQUAL (+ 1/2 1/2) 1) T)
+(CHECK 'rat-menor (< 1/3 1/2) T)
+(CHECK 'rat-mayor (> 1/3 1/2) NIL)
+(CHECK 'rat-igual (= 1/2 2/4) T)
+(CHECK 'rat-menor-igual (<= 2/4 1/2) T)
+(CHECK 'rat-negativo (< -1/2 1/3) T)
+(CHECK 'rat-vs-float (= 1/2 0.5) T)
+; La comparacion NO pasa por coma flotante: si lo hiciera, esta daria T.
+(CHECK 'rat-exacto-no-float (= 1/3 0.3333) NIL)
+(CHECK 'rat-mixto-float (+ 1/2 0.5) 1.0)
+
 ; --- Fin ---
-(PRINT "REGRESION-OK")
-(PRINT 'REGRESION-OK)
+(IF (= FALLOS 0)
+    (PROGN (PRINT "REGRESION-OK") (PRINT 'REGRESION-OK))
+    (PROGN (DISPLAY "REGRESION CON FALLOS: ") (PRINT FALLOS)))
 

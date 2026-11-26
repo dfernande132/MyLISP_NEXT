@@ -20,6 +20,11 @@ static int pos_buffer = 0;
 static int fin_buffer = 0;
 static int fin_fichero = 0;
 static unsigned char handle_actual;
+/* 1 mientras hay un LOAD en curso. buffer_lectura, pos_buffer,
+   fin_buffer, fin_fichero y handle_actual son UNICOS (static): un LOAD
+   dentro de un LOAD los pisaria, cerraria el handle equivocado y
+   dejaria el externo roto. Se rechaza el anidamiento con un error. */
+static unsigned char cargando = 0;
 
 /* rellena buffer_lectura desde el fichero cuando se agota */
 static void rellenar_buffer(void) {
@@ -75,6 +80,14 @@ void DoLoad(const char *nombre) {
     CellIdx expr, resultado;
     DIAG_PILA();
 
+    if (cargando) {
+        EvalError = 1;
+        INK(COLOR_ERROR);
+        printf("%s\n", MSG_LOAD_ANIDADO);
+        INK(COLOR_ENTRADA);
+        return;
+    }
+
     errno = 0;
     handle_actual = esxdos_f_open(nombre, ESXDOS_MODE_OPEN_EXIST | ESXDOS_MODE_R);
     if (errno != 0) {
@@ -91,6 +104,7 @@ void DoLoad(const char *nombre) {
     pos_buffer = 0;
     fin_buffer = 0;
     fin_fichero = 0;
+    cargando = 1;
 
     while ((r = LeerExpresionCompleta(leer_linea_fichero, NULL, NULL,
                                        reportar_error_largo)) == 1) {
@@ -126,6 +140,7 @@ void DoLoad(const char *nombre) {
     }
 
     esxdos_f_close(handle_actual);
+    cargando = 0;
     INK(COLOR_INFO);
     if (!EjecucionCancelada && !HeapError) printf("%s\n", MSG_CARGA_COMPLETADA);
     INK(COLOR_ENTRADA);
